@@ -24,7 +24,7 @@ function App() {
         }}
       >
         <Box>
-          <Heading>dApp Starter Template</Heading>
+          <Heading>dApp Cojones ALPHA</Heading>
         </Box>
 
         <Box>

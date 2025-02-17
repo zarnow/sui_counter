@@ -15,6 +15,7 @@ import { useState } from "react";
 import ClipLoader from "react-spinners/ClipLoader";
 import { toast } from "react-toastify";
 
+
 export function Counter({ id }: { id: string }) {
   const counterPackageId = useNetworkVariable("counterPackageId");
   const suiClient = useSuiClient();
@@ -34,17 +35,20 @@ export function Counter({ id }: { id: string }) {
     setWaitingForTxn(method);
 
     const tx = new Transaction();
-    tx.setGasBudgetIfNotSet(10000000);
+    //tx.setGasBudgetIfNotSet(10000000);
 
     if (method === "reset") {
       tx.moveCall({
-        arguments: [tx.object(id), tx.pure.u64(0)],
-        target: `${counterPackageId}::sui_counter::set_value`,
+        arguments: [tx.object(id), tx.object('0x6')],
+        target: `${counterPackageId}::sui_counter::withdraw_all`,
       });
     } else {
+      const coin = tx.splitCoins(tx.gas, [1000000]);
       tx.moveCall({
-        arguments: [tx.object(id)],
-        target: `${counterPackageId}::sui_counter::increment`,
+        //arguments: [tx.object(id), tx.object('0x6')], //timer 0x6 initialization
+        //target: `${counterPackageId}::sui_counter::increment`,
+        arguments: [coin, tx.object(id)], //timer 0x6 initialization
+        target: `${counterPackageId}::sui_counter::deposit`,
       });
     }
 
@@ -53,7 +57,11 @@ export function Counter({ id }: { id: string }) {
         transaction: tx,
       },
       {
-        onError: (err) => {toast.error(err.message);},
+        onError: (err) => {
+          toast.error(err.message);
+          setWaitingForTxn("");
+
+        },
         onSuccess: (tx) => {
           suiClient.waitForTransaction({ digest: tx.digest }).then(async () => {
             await refetch();
@@ -71,15 +79,23 @@ export function Counter({ id }: { id: string }) {
 
   if (!data.data) return <Text>Not found</Text>;
 
-  const ownedByCurrentAccount =
-    getCounterFields(data.data)?.owner === currentAccount?.address;
-
+  const ownedByCurrentAccount = getCounterFields(data.data)?.owner === currentAccount?.address;
+  const timestamp_now =  Date.now();//getCounterFields(data.data)?.timestamp;
+  const timestamp_unlock = getCounterFields(data.data)?.lock_till_timestamp;
+  const balance = getCounterFields(data.data)?.balance.toString();
+  const date_now = new Intl.DateTimeFormat('pl-PL', {year: 'numeric', month: '2-digit',day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(Number(timestamp_now));
+  const date_unlock = new Intl.DateTimeFormat('pl-PL', {year: 'numeric', month: '2-digit',day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(Number(timestamp_unlock));
+  
   return (
     <>
-      <Heading size="3">Counter {id}</Heading>
+      <Heading size="3">Locker object id: {id}</Heading>
 
       <Flex direction="column" gap="2">
-        <Text>Count: {getCounterFields(data.data)?.value}</Text>
+        
+        <Text>Balance: {parseFloat(balance ? balance : '0') * 0.000000001} SUI</Text>
+        <Text>Native Balance: { getCounterFields(data.data)?.native_balance} MIST</Text>
+        <Text>Date now: {date_now}.{timestamp_now?.toString().slice(-3)}</Text>
+        <Text>Unlock Date: {date_unlock}.{timestamp_unlock?.toString().slice(-3)}</Text>
         <Flex direction="row" gap="2">
           <Button
             onClick={() => executeMoveCall("increment")}
@@ -88,7 +104,7 @@ export function Counter({ id }: { id: string }) {
             {waitingForTxn === "increment" ? (
               <ClipLoader size={20} />
             ) : (
-              "Increment"
+              "Deposit 0.001 more SUI"
             )}
           </Button>
           {ownedByCurrentAccount ? (
@@ -96,7 +112,7 @@ export function Counter({ id }: { id: string }) {
               onClick={() => executeMoveCall("reset")}
               disabled={waitingForTxn !== ""}
             >
-              {waitingForTxn === "reset" ? <ClipLoader size={20} /> : "Reset"}
+              {waitingForTxn === "reset" ? <ClipLoader size={20} /> : "Withdraw all funds"}
             </Button>
           ) : null}
         </Flex>
@@ -109,5 +125,5 @@ function getCounterFields(data: SuiObjectData) {
     return null;
   }
 
-  return data.content.fields as { value: number; owner: string };
+  return data.content.fields as { lock_till_timestamp:string; balance: string; owner: string; native_balance: string };
 }

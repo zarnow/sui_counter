@@ -7,8 +7,8 @@ sui client publish --skip-fetch-latest-git-deps
 published PackageID: 0x1820092cf24d4fdac9b45e21e056c36608e1e327c14112f07e5f6a1989a829dc
 Modules: sui_counter
 
-refreshed package: 0x8bf892986a2508763d49a1ce1bf26cceab7a34e3d5d8ef2b5ebb3ff017ec8760
-
+refreshed package: 0x297e1de3b5f7e1eda1d9a8b97516704c07fbedfe54352c8719fa855eed7a3585
+locker package: 0x3380c17ebbb5dac9915fdce0d60cc2d69c9cb143187a11e612ee50ad299cf048
 # run 
 cd c:\Tools\ts-sdks\packages\create-dapp\templates\react-client-dapp
 notepad.exe src\constants.ts
